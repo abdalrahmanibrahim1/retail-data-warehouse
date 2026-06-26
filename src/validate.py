@@ -21,28 +21,28 @@ def validate_customer_ids(customers_df):
     # Invalid IDs are missing, badly formatted, or duplicated after the first occurrence
     customer_ids = customers_df["customer_id"].astype("string").str.strip()
 
-    invalid_customer_id_mask = (
+    invalid_customer_ids_mask = (
         customer_ids.isna() | 
         (customer_ids== "") |
         ~customer_ids.str.match(r"^C\d{4}$", na=False) |
         customer_ids.duplicated()
     )
     
-    valid_customers_df= customers_df[~invalid_customer_id_mask].copy()
-    invalid_customers_df= customers_df[invalid_customer_id_mask].copy()
+    valid_customers_df= customers_df[~invalid_customer_ids_mask].copy()
+    invalid_customers_df= customers_df[invalid_customer_ids_mask].copy()
     
     return valid_customers_df, invalid_customers_df
 
 def validate_customer_name(customers_df):
     customer_names = customers_df["customer_name"].astype("string").str.strip()
 
-    invalid_customer_name_mask = (
+    invalid_customer_names_mask = (
         customer_names.isna() |
         (customer_names=="")
     )
 
-    valid_customers_df= customers_df[~invalid_customer_name_mask].copy()
-    invalid_customers_df= customers_df[invalid_customer_name_mask].copy()
+    valid_customers_df= customers_df[~invalid_customer_names_mask].copy()
+    invalid_customers_df= customers_df[invalid_customer_names_mask].copy()
 
     return valid_customers_df, invalid_customers_df
 
@@ -195,6 +195,73 @@ def validate_products(products_df):
     
     return valid_products_df, invalid_product_df
 
+def validate_stores_schema(stores_df):
+    expected_columns = ["store_id", "store_name", "store_city"]
+    actual_columns = stores_df.columns.tolist()
+
+    if actual_columns != expected_columns:
+        raise ValueError(
+            f"Store schema incorrect\n"
+            f"Expected: {expected_columns}\n"
+            f"Received: {actual_columns}")
+
+def validate_store_ids(stores_df):
+    # Invalid IDs are missing, badly formatted, or duplicated after the first occurrence
+    store_ids = stores_df["store_id"].astype("string").str.strip()
+
+    invalid_store_ids_mask = (
+        store_ids.isna() | 
+        (store_ids== "") |
+        ~store_ids.str.match(r"^ST\d{3}$", na=False) |
+        store_ids.duplicated()
+    )
+    
+    valid_stores_df= stores_df[~invalid_store_ids_mask].copy()
+    invalid_stores_df= stores_df[invalid_store_ids_mask].copy()
+    
+    return valid_stores_df, invalid_stores_df
+
+def validate_store_names(stores_df):
+    store_names = stores_df["store_name"].astype("string").str.strip()
+
+    invalid_store_names_mask = (
+        store_names.isna() |
+        (store_names=="")
+    )
+
+    valid_stores_df= stores_df[~invalid_store_names_mask].copy()
+    invalid_stores_df= stores_df[invalid_store_names_mask].copy()
+
+    return valid_stores_df, invalid_stores_df
+
+def validate_store_cities(stores_df):
+    store_cities = stores_df["store_city"].astype("string").str.strip()
+
+    invalid_store_cities_mask = ~store_cities.isin(ALLOWED_STORE_CITIES)
+
+    valid_stores_df = stores_df[~invalid_store_cities_mask].copy()
+    invalid_stores_df = stores_df[invalid_store_cities_mask].copy()
+
+    return valid_stores_df, invalid_stores_df
+
+def validate_stores(stores_df):
+    validate_stores_schema(stores_df)
+
+    # Run validations sequentially; only rows that pass continue to the next check
+    valid_stores_df, invalid_store_ids_df = validate_store_ids(stores_df)
+    valid_stores_df, invalid_store_names_df = validate_store_names(valid_stores_df)
+    valid_stores_df, invalid_store_cities_df = validate_store_cities(valid_stores_df)
+    
+
+    invalid_stores_df =pd.concat(
+        [
+            invalid_store_ids_df, 
+            invalid_store_names_df,
+            invalid_store_cities_df
+        ] , ignore_index= True
+    )
+    
+    return valid_stores_df, invalid_stores_df
 
 
 #valide products
@@ -205,13 +272,13 @@ def validate_products(products_df):
 
 if __name__ == "__main__":
     data = extract_all()
-    validate_products_schema(data["products"])
-    valid_products_df, invalid_products_df = validate_products(data["products"])
 
-    print(f"Valid customers: {len(valid_products_df)}")
-    print(f"Invalid customers: {len(invalid_products_df)}")
+    valid_stores_df, invalid_stores_df = validate_stores(data["stores"])
 
-    if not invalid_products_df.empty:
-        print(invalid_products_df)
+    print(f"Valid stores: {len(valid_stores_df)}")
+    print(f"Invalid stores: {len(invalid_stores_df)}")
+
+    if not invalid_stores_df.empty:
+        print(invalid_stores_df)
 
    
