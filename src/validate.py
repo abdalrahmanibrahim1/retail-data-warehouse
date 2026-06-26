@@ -437,22 +437,54 @@ def validate_sales(sales_df, valid_customers_df, valid_products_df, valid_stores
 
     return valid_sales_df, invalid_sales_df
 
-if __name__ == "__main__":
-    data = extract_all()
-
-    valid_customers_df, invalid_customers_df = validate_customers(data["customers"])
-    valid_products_df, invalid_products_df = validate_products(data["products"])
-    valid_stores_df, invalid_stores_df = validate_stores(data["stores"])
+def validate_all(customers_df, products_df, stores_df, sales_df):
+    valid_customers_df, invalid_customers_df = validate_customers(customers_df)
+    valid_products_df, invalid_products_df = validate_products(products_df)
+    valid_stores_df, invalid_stores_df = validate_stores(stores_df)
 
     valid_sales_df, invalid_sales_df = validate_sales(
-        data["sales"],
+        sales_df,
         valid_customers_df,
         valid_products_df,
         valid_stores_df
     )
 
-    print(f"Valid sales: {len(valid_sales_df)}")
-    print(f"Invalid sales: {len(invalid_sales_df)}")
+    valid_data = {
+        "customers": valid_customers_df,
+        "products": valid_products_df,
+        "stores": valid_stores_df,
+        "sales": valid_sales_df,
+    }
 
-    if not invalid_sales_df.empty:
-        print(invalid_sales_df)
+    invalid_data = {
+        "customers": invalid_customers_df,
+        "products": invalid_products_df,
+        "stores": invalid_stores_df,
+        "sales": invalid_sales_df,
+    }
+
+    return valid_data, invalid_data
+
+if __name__ == "__main__":
+    data = extract_all()
+
+    valid_data, invalid_data = validate_all(
+        data["customers"],
+        data["products"],
+        data["stores"],
+        data["sales"]
+    )
+
+    print("Validation summary:")
+    print("-------------------")
+
+    for table_name in valid_data:
+        print(f"{table_name.capitalize()}:")
+        print(f"  Valid rows: {len(valid_data[table_name])}")
+        print(f"  Invalid rows: {len(invalid_data[table_name])}")
+
+    print("\nInvalid sales preview:")
+    if not invalid_data["sales"].empty:
+        print(invalid_data["sales"])
+    else:
+        print("No invalid sales found.")
