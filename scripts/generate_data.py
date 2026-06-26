@@ -189,7 +189,7 @@ def generate_sales(customers_df, products_df, stores_df, num_sales=10000):
 
         quantity = random.randint(1, 5)
 
-        # Vary unit price to simulate discounts, promotions, and occasional markups
+        # Vary unit price to simulate discounts, promotions, and occasional markupgit
         unit_price = round(product["base_price"] * random.uniform(0.85, 1.10), 2)
         # Vary unit cost slightly to simulate supplier cost changes
         unit_cost = round(product["base_cost"] * random.uniform(0.98, 1.05), 2)
