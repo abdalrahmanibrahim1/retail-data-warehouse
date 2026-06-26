@@ -40,11 +40,16 @@ def generate_customers():
         })
 
     customers_df = pd.DataFrame(customers)
+    dirty_customers_df = add_invalid_customers(customers_df)
 
     output_path = DATA_DIR / "customers.csv"
-    customers_df.to_csv(output_path, index = False)
+    dirty_customers_df.to_csv(output_path, index=False)
+
     
-    print(f"Generated {len(customers)} customers at {output_path}")
+    print(
+    f"Generated {len(customers_df)} valid customers "
+    f"+ {len(dirty_customers_df) - len(customers_df)} invalid customers at {output_path}"
+)
 
     return customers_df
 
@@ -130,12 +135,15 @@ def generate_products():
         })
 
     products_df = pd.DataFrame(products)
+    dirty_products_df = add_invalid_products(products_df)
 
     output_path = DATA_DIR / "products.csv"
+    dirty_products_df.to_csv(output_path, index=False)
 
-    products_df.to_csv(output_path, index=False)
-
-    print(f"Generated {len(products_df)} products at {output_path}")
+    print(
+    f"Generated {len(products_df)} valid products "
+    f"+ {len(dirty_products_df) - len(products_df)} invalid products at {output_path}"
+    )
 
     return products_df
 
@@ -152,12 +160,18 @@ def generate_stores():
     ]
     
     stores_df = pd.DataFrame(stores)
+    dirty_stores_df = add_invalid_stores(stores_df)
 
     output_path = DATA_DIR / "stores.csv"
-    stores_df.to_csv(output_path, index=False)
+    dirty_stores_df.to_csv(output_path, index=False)
 
-    print(f"Generated {len(stores_df)} stores at {output_path}")
+    print(
+        f"Generated {len(stores_df)} valid stores "
+        f"+ {len(dirty_stores_df) - len(stores_df)} invalid stores at {output_path}"
+    )
+
     return stores_df
+
 
 def generate_sales(customers_df, products_df, stores_df, num_sales=10000):
     sales = []
@@ -189,7 +203,7 @@ def generate_sales(customers_df, products_df, stores_df, num_sales=10000):
 
         quantity = random.randint(1, 5)
 
-        # Vary unit price to simulate discounts, promotions, and occasional markupgit
+        # Vary unit price to simulate discounts, promotions, and occasional markup
         unit_price = round(product["base_price"] * random.uniform(0.85, 1.10), 2)
         # Vary unit cost slightly to simulate supplier cost changes
         unit_cost = round(product["base_cost"] * random.uniform(0.98, 1.05), 2)
@@ -208,14 +222,95 @@ def generate_sales(customers_df, products_df, stores_df, num_sales=10000):
         sales.append(sale)
 
     sales_df = pd.DataFrame(sales)
+    dirty_sales_df = add_invalid_sales(sales_df)
 
     output_path = DATA_DIR / "sales.csv"
-    sales_df.to_csv(output_path, index=False)
+    dirty_sales_df.to_csv(output_path, index=False)
 
-    print(f"Generated {len(sales_df)} sales at {output_path}")
+    print(
+        f"Generated {len(sales_df)} valid sales "
+        f"+ {len(dirty_sales_df) - len(sales_df)} invalid sales at {output_path}"
+    )
 
     return sales_df
 
+def add_invalid_customers(customers_df):
+    bad_data = [
+        {"customer_id": "","customer_name":"Ahmad Ali","customer_city":"Amman", "customer_segment":"Premium"},
+        {"customer_id": "S0003","customer_name":"Arthur Morgan","customer_city":"Irbid", "customer_segment":"Business"},
+        {"customer_id": "C0006","customer_name":"Petter Griffin","customer_city":"Zarqa", "customer_segment":"Regular"},
+        {"customer_id": "C0101","customer_name":"","customer_city":"Zarqa", "customer_segment":"Regular"},
+        {"customer_id": "C0102","customer_name":"Archer","customer_city":"Miami", "customer_segment":"Regular"},
+        {"customer_id": "C0103","customer_name":"Homer Simpson","customer_city":"Amman", "customer_segment":"Plus"},
+    ]
+
+    bad_customers_df = pd.DataFrame(bad_data)
+    dirty_customers_df = pd.concat([customers_df, bad_customers_df], ignore_index=True)
+    
+    return dirty_customers_df
+
+def add_invalid_products(products_df):
+    bad_product_data = [
+        {"product_id":"","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": 10.50},
+        {"product_id":"S0001","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": 10.50},
+        {"product_id":"P0001","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": 10.50},
+        {"product_id":"P0051","product_name": None, "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": 10.50},
+        {"product_id":"P0052","product_name": "Mouse", "category": "", "brand": "Asus", "base_price": 18.99, "base_cost": 10.50},
+        {"product_id":"P0053","product_name": "Mouse", "category": "Electronics", "brand": None, "base_price": 18.99, "base_cost": 10.50},  
+        {"product_id":"P0054","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": "Asus", "base_cost": 10.50}, 
+        {"product_id":"P0055","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": -3},
+        {"product_id":"P0056","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": 25.00},
+        {"product_id":"P0057","product_name": "Mouse", "category": "Toys", "brand": "Asus", "base_price": 18.99, "base_cost": 10},     
+    ]
+    
+    bad_product_data_df = pd.DataFrame(bad_product_data)
+    dirty_products_df = pd.concat([products_df, bad_product_data_df], ignore_index=True)
+
+    return dirty_products_df
+
+def add_invalid_stores(stores_df):
+    bad_store_data= [
+        {"store_id": "", "store_name": "Amman Downtown Store", "store_city": "Amman"},
+        {"store_id": "S0002", "store_name": "Irbid City Mall Store", "store_city": "Irbid"},
+        {"store_id": "ST001", "store_name": "Zarqa Central Store", "store_city": "Zarqa"},
+        {"store_id": "ST009", "store_name": "", "store_city": "Aqaba"},
+        {"store_id": "ST010", "store_name": "Salt Heritage Store", "store_city": None},
+        {"store_id": "ST011", "store_name": "Madaba Market Store", "store_city": "Miami"},
+    ]
+    
+    bad_store_data_df = pd.DataFrame(bad_store_data)
+    dirty_stores_df = pd.concat([stores_df, bad_store_data_df], ignore_index=True)
+
+    return dirty_stores_df
+
+def add_invalid_sales(sales_df):
+    bad_sale_data = [
+        {"sale_id": "", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "SALE010002", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S000001", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010001", "customer_id": "", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010002", "customer_id": "C9999", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010003", "customer_id": "C0001", "product_id": "", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010004", "customer_id": "C0001", "product_id": "P9999", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010005", "customer_id": "C0001", "product_id": "P0001", "store_id": "", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010006", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST020", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010007", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "not-a-date", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010008", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2028-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010009", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 0, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010010", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": -2, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010011", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2.5, "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010012", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": "two", "unit_price": 20.00, "unit_cost": 10.00},
+        {"sale_id": "S010013", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": None, "unit_cost": 10.00},
+        {"sale_id": "S010014", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": -15.2, "unit_cost": 10.00},
+        {"sale_id": "S010015", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": None},
+        {"sale_id": "S010016", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": -3},
+        {"sale_id": "S010017", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 100.00},
+    ]
+
+    bad_sale_data_df = pd.DataFrame(bad_sale_data)
+    dirty_sales_df = pd.concat([sales_df, bad_sale_data_df], ignore_index=True)
+
+    return dirty_sales_df
 
 if __name__ == "__main__":
     customers_df = generate_customers()
