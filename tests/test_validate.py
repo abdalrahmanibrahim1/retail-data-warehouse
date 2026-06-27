@@ -25,6 +25,16 @@ def valid_product_data():
     
     return pd.DataFrame([data])
 
+@pytest.fixture
+def valid_store_data():
+    data = {
+        "store_id": "ST001",
+        "store_name": "Amman Main Store",
+        "store_city": "Amman",
+    }
+
+    return pd.DataFrame([data])
+
 
 def test_validate_customer_schema_rejects_incorrect_schema(valid_customer_data):
     valid_data = valid_customer_data.copy()
@@ -136,3 +146,39 @@ def test_validate_product_price_cost_relationship_rejects_invalid_relationship(v
     assert len(invalid_df) == 1
     assert (invalid_df.iloc[0]["base_price"] - invalid_df.iloc[0]["base_cost"]) < 0
 
+def test_validate_store_schema_rejects_incorrect_schema(valid_store_data):
+    bad_data = valid_store_data.copy()
+    bad_data = bad_data.drop(columns = ["store_name"])
+
+    with pytest.raises(ValueError):
+        validate.validate_stores_schema(bad_data)
+    
+def test_validate_store_ids_rejects_missing_id(valid_store_data):
+    bad_data = valid_store_data.copy()
+    bad_data.loc[0,"store_id"] = None
+
+    valid_df, invalid_df = validate.validate_store_ids(bad_data)
+
+    assert len(valid_df) == 0
+    assert len(invalid_df) == 1
+    assert pd.isna(invalid_df.iloc[0]["store_id"])
+
+def test_validate_store_names_rejects_empty_name(valid_store_data):
+    bad_data = valid_store_data.copy()
+    bad_data.loc[0,"store_name"] = ""
+
+    valid_df, invalid_df = validate.validate_store_names(bad_data)
+
+    assert len(valid_df) == 0
+    assert len(invalid_df) == 1
+    assert invalid_df.iloc[0]["store_name"] == ""
+
+def test_validate_store_cities_rejects_invalid_city(valid_store_data):
+    bad_data = valid_store_data.copy()
+    bad_data.loc[0, "store_city"] = "Miami"
+
+    valid_df, invalid_df = validate.validate_store_cities(bad_data)
+
+    assert len(valid_df) == 0
+    assert len(invalid_df) == 1
+    assert invalid_df.iloc[0]["store_city"] == "Miami"
