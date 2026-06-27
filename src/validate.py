@@ -1,4 +1,4 @@
-from extract import extract_all
+from src.extract import extract_all
 import pandas as pd
 
 #constants, allowed values
@@ -33,7 +33,7 @@ def validate_customer_ids(customers_df):
     
     return valid_customers_df, invalid_customers_df
 
-def validate_customer_name(customers_df):
+def validate_customer_names(customers_df):
     customer_names = customers_df["customer_name"].astype("string").str.strip()
 
     invalid_customer_names_mask = (
@@ -46,7 +46,7 @@ def validate_customer_name(customers_df):
 
     return valid_customers_df, invalid_customers_df
 
-def validate_customer_city(customers_df):
+def validate_customer_cities(customers_df):
     customer_cities = customers_df["customer_city"].astype("string").str.strip()
     invalid_customer_city_mask = ~customer_cities.isin(ALLOWED_CITIES)
     
@@ -55,7 +55,7 @@ def validate_customer_city(customers_df):
 
     return valid_customers_df, invalid_customers_df
 
-def validate_customer_segment(customers_df):
+def validate_customer_segments(customers_df):
     customer_segments = customers_df["customer_segment"].astype("string").str.strip()
     invalid_customer_segment_mask = ~customer_segments.isin(ALLOWED_CUSTOMER_SEGMENTS)
 
@@ -70,11 +70,11 @@ def validate_customers(customers_df):
     # Run validations sequentially; only rows that pass continue to the next check
     valid_customers_df, invalid_id_df = validate_customer_ids(customers_df)
 
-    valid_customers_df, invalid_name_df = validate_customer_name(valid_customers_df)
+    valid_customers_df, invalid_name_df = validate_customer_names(valid_customers_df)
 
-    valid_customers_df, invalid_city_df = validate_customer_city(valid_customers_df)
+    valid_customers_df, invalid_city_df = validate_customer_cities(valid_customers_df)
 
-    valid_customers_df, invalid_segment_df = validate_customer_segment(valid_customers_df)
+    valid_customers_df, invalid_segment_df = validate_customer_segments(valid_customers_df)
 
     invalid_customers_df = pd.concat([invalid_id_df, invalid_name_df, invalid_city_df, invalid_segment_df], ignore_index=True)
     
