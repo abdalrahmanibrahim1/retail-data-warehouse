@@ -305,6 +305,7 @@ def test_validate_sale_cost_price_relationship_rejects_invalid_relationship(vali
     assert len(invalid_df) == 1
     assert invalid_df.iloc[0]["unit_cost"] > invalid_df.iloc[0]["unit_price"]
 
+
 def test_validate_accepts_valid_data(valid_customer_data, valid_product_data, valid_store_data, valid_sale_data):
     valid_data, invalid_data = validate.validate_all(
         valid_customer_data,
@@ -322,4 +323,3 @@ def test_validate_accepts_valid_data(valid_customer_data, valid_product_data, va
     assert len(invalid_data["products"]) == 0
     assert len(invalid_data["stores"]) == 0
     assert len(invalid_data["sales"]) == 0
-    
