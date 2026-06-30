@@ -712,7 +712,7 @@ def generate_report(category_for_growth="Electronics"):
     with open(markdown_report_path, "w", encoding="utf-8") as file:
         file.write("\n".join(lines))
 
-    print(f"Reports generated successfully in {REPORTS_DIR}/")
+    return REPORTS_DIR
 
 
 if __name__ == "__main__":

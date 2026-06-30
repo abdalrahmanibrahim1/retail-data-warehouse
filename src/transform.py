@@ -1,6 +1,4 @@
 import pandas as pd
-import src.validate as validate
-from src.extract import extract_all
 from datetime import date
 
 def build_dim_customer(valid_customers_df):
@@ -134,19 +132,3 @@ def transform_all(valid_data):
     }
 
     return transformed_data
-
-
-if __name__ == "__main__":
-    data = extract_all()
-    valid_data, invalid_data = validate.validate_all(
-        data["customers"],
-        data["products"],
-        data["stores"],
-        data["sales"]
-    )
-
-    transformed_data = transform_all(valid_data)
-
-    for table_name, df in transformed_data.items():
-        print(table_name)
-        print(df.head())

@@ -37,16 +37,3 @@ def extract_all():
     }
 
     return data
-
-
-if __name__ == "__main__":
-    data = extract_all()
-    print(data["customers"].head())
-    print(data["products"].head())
-    print(data["stores"].head())
-    print(data["sales"].head())
-
-    print(data["customers"].shape)
-    print(data["products"].shape)
-    print(data["stores"].shape)
-    print(data["sales"].shape)

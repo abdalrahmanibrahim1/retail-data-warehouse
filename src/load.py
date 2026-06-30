@@ -1,9 +1,13 @@
 import psycopg2
 from dotenv import load_dotenv
 import os
-from src.extract import extract_all
-from src.validate import validate_all
-from src.transform import transform_all
+from pathlib import Path
+import logging 
+
+project_root = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = project_root / "schema.sql"
+
+logger = logging.getLogger(__name__)
 
 def get_connection():
     load_dotenv()
@@ -19,7 +23,7 @@ def get_connection():
     return conn
 
 def create_tables(cursor):
-    with open("schema.sql", 'r') as file:
+    with open(SCHEMA_PATH, "r", encoding="utf-8") as file:
         schema_sql = file.read()
 
     cursor.execute(schema_sql)
@@ -51,9 +55,7 @@ def load_dim_customer(dim_customer, cursor):
         
     cursor.execute("SELECT count(*)  FROM dim_customer;")
     row_count = cursor.fetchone()
-    if len(dim_customer) == row_count[0]:
-        print("All customers loaded in successfully")
-    else:
+    if len(dim_customer) != row_count[0]:
         raise ValueError("Customer load failed: row count mismatch")
 
 def load_dim_product(dim_product, cursor):
@@ -79,9 +81,7 @@ def load_dim_product(dim_product, cursor):
     cursor.execute("SELECT COUNT(*) FROM dim_product;")
     row_count = cursor.fetchone()
 
-    if len(dim_product) == row_count[0]:
-        print("All products loaded successfully")
-    else:
+    if len(dim_product) != row_count[0]:
         raise ValueError("Products load failed: row count mismatch")
 
 def load_dim_store(dim_store, cursor):
@@ -105,9 +105,7 @@ def load_dim_store(dim_store, cursor):
     cursor.execute("SELECT COUNT(*) FROM dim_store;")
     row_count = cursor.fetchone()
 
-    if len(dim_store) == row_count[0]:
-        print("All stores loaded successfully")
-    else:
+    if len(dim_store) != row_count[0]:
         raise ValueError("Stores load failed: row count mismatch")
 
 def load_dim_date(dim_date, cursor):
@@ -137,9 +135,7 @@ def load_dim_date(dim_date, cursor):
     cursor.execute("SELECT COUNT(*) FROM dim_date;")
     row_count = cursor.fetchone()
 
-    if len(dim_date) == row_count[0]:
-        print("All dates loaded successfully")
-    else:
+    if len(dim_date) != row_count[0]:
         raise ValueError("Dates load failed: row count mismatch")
 
 def load_fact_sales(fact_sales, cursor):
@@ -173,9 +169,7 @@ def load_fact_sales(fact_sales, cursor):
     cursor.execute("SELECT COUNT(*) FROM fact_sales;")
     row_count = cursor.fetchone()
 
-    if len(fact_sales) == row_count[0]:
-        print("All sales loaded successfully")
-    else:
+    if len(fact_sales) != row_count[0]:
         raise ValueError("Sales load failed: row count mismatch")
     
 def load_all(transformed_data):
@@ -183,32 +177,29 @@ def load_all(transformed_data):
     cursor = conn.cursor()
 
     try:
+        logger.info("Creating warehouse tables if they do not exist")
         create_tables(cursor)
+
+        logger.info("Clearing existing warehouse data")
         clear_tables(cursor)
+
+        logger.info("Loading dimension tables")
         load_dim_customer(transformed_data["dim_customer"], cursor)
         load_dim_product(transformed_data["dim_product"], cursor)
         load_dim_store(transformed_data["dim_store"], cursor)
         load_dim_date(transformed_data["dim_date"], cursor)
+
+        logger.info("Loading fact table")
         load_fact_sales(transformed_data["fact_sales"], cursor)
 
         conn.commit()
-        print("Warehouse load completed succesfully")
-    except:
+        logger.info("Warehouse load committed successfully")
+
+    except Exception:
         conn.rollback()
-        print("Warehouse load failed. Changes were rolled back.")
+        logger.exception("Warehouse load failed. Transaction was rolled back")
         raise
+    
     finally:
         cursor.close()
         conn.close()
-
-if __name__ == "__main__":
-    data = extract_all()
-    valid_data, invalid_data = validate_all(
-        data["customers"],
-        data["products"],
-        data["stores"],
-        data["sales"]
-    )
-    transformed_data = transform_all(valid_data)
-
-    load_all(transformed_data)

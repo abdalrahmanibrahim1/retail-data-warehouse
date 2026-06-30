@@ -7,6 +7,7 @@ __pycache__/
 data/*.csv
 reports/*.txt
 reports/*.csv
+reports/*.md
 
 .pytest_cache/
 .DS_Store
