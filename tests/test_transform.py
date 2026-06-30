@@ -1,11 +1,9 @@
 """
-    1. build_dim_customer adds customer_key
-    2. build_dim_product adds product_key and removes base_price/base_cost
-    3. build_dim_store adds store_key
-    4. build_dim_date creates correct date_key and weekday
-    5. build_fact_sales maps IDs to keys correctly
-    6. build_fact_sales calculates revenue and profit correctly
-    7. transform_all returns all 5 tables
+Tests for the transformation layer.
+
+These tests verify that validated source data is transformed into the expected
+warehouse dimension and fact tables, including surrogate keys, date keys, and
+fact measures.
 """
 
 import pytest
@@ -60,9 +58,8 @@ def valid_sale():
     }
 
     return pd.DataFrame([sale])
-def test_build_dim_customers_adds_customer_key(valid_customer):
-    
 
+def test_build_dim_customers_adds_customer_key(valid_customer):
     customer_df = pd.DataFrame([valid_customer])
     dim_customer = transform.build_dim_customer(customer_df)
 
@@ -121,7 +118,7 @@ def test_build_dim_date_creates_expected_date_dimension():
     assert last_row["day"] == 31
 
 
-def test_build_fact_sales(valid_customer, valid_product, valid_store, valid_sale):
+def test_build_fact_sales_maps_keys_and_calculates_measures(valid_customer, valid_product, valid_store, valid_sale):
     dim_customer = transform.build_dim_customer(pd.DataFrame([valid_customer]))
     dim_product = transform.build_dim_product(pd.DataFrame([valid_product]))
     dim_store = transform.build_dim_store(pd.DataFrame([valid_store]))

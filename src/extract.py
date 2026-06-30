@@ -1,3 +1,9 @@
+"""
+CSV extraction layer for the retail data warehouse pipeline.
+
+This module reads the raw source CSV files from the data/ directory and returns
+them as pandas DataFrames for validation, transformation, and loading.
+"""
 import pandas as pd
 from pathlib import Path
 
@@ -24,6 +30,9 @@ def extract_sales():
     return pd.read_csv(path)
 
 def extract_all():
+    """
+    Extract all source CSV files and return them in a dictionary keyed by table name.
+    """
     customers_df = extract_customers()
     products_df = extract_products()
     stores_df = extract_stores()

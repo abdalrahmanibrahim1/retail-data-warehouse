@@ -1,15 +1,25 @@
+"""
+PostgreSQL loading layer for the retail data warehouse pipeline.
+
+This module creates the warehouse schema, clears existing warehouse data, and
+loads transformed dimension and fact tables into PostgreSQL using a full-refresh
+strategy. The full load runs inside one transaction so failures can be rolled back.
+"""
 import psycopg2
 from dotenv import load_dotenv
 import os
 from pathlib import Path
 import logging 
 
-project_root = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = project_root / "schema.sql"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = PROJECT_ROOT / "schema.sql"
 
 logger = logging.getLogger(__name__)
 
 def get_connection():
+    """
+    Create and return a PostgreSQL connection using database settings from .env.
+    """
     load_dotenv()
 
     conn = psycopg2.connect(
@@ -23,12 +33,21 @@ def get_connection():
     return conn
 
 def create_tables(cursor):
+    """
+    Execute schema.sql to create warehouse tables if they do not already exist.
+    """
     with open(SCHEMA_PATH, "r", encoding="utf-8") as file:
         schema_sql = file.read()
 
     cursor.execute(schema_sql)
 
 def clear_tables(cursor):
+    """
+    Clear all warehouse tables before a full refresh.
+
+    fact_sales is included first because it depends on the dimension tables through
+    foreign keys. CASCADE ensures dependent records are removed safely.
+    """
     cursor.execute("""
         TRUNCATE TABLE fact_sales, dim_customer, dim_product, dim_store, dim_date RESTART IDENTITY CASCADE;
     """)
@@ -53,7 +72,7 @@ def load_dim_customer(dim_customer, cursor):
             )
         )
         
-    cursor.execute("SELECT count(*)  FROM dim_customer;")
+    cursor.execute("SELECT COUNT(*) FROM dim_customer;")
     row_count = cursor.fetchone()
     if len(dim_customer) != row_count[0]:
         raise ValueError("Customer load failed: row count mismatch")
@@ -139,6 +158,11 @@ def load_dim_date(dim_date, cursor):
         raise ValueError("Dates load failed: row count mismatch")
 
 def load_fact_sales(fact_sales, cursor):
+    """
+    Load the sales fact table after all dimension tables have been loaded.
+
+    The fact table depends on dimension surrogate keys, so it must be loaded last.
+    """
     for _, row in fact_sales.iterrows():
         cursor.execute("""
             INSERT INTO fact_sales (
@@ -173,6 +197,13 @@ def load_fact_sales(fact_sales, cursor):
         raise ValueError("Sales load failed: row count mismatch")
     
 def load_all(transformed_data):
+    """
+    Load all transformed warehouse tables into PostgreSQL using a full-refresh strategy.
+
+    The load runs inside a single transaction. If any table fails to load or a
+    row-count check fails, the transaction is rolled back so the warehouse is not
+    left partially refreshed.
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -183,6 +214,7 @@ def load_all(transformed_data):
         logger.info("Clearing existing warehouse data")
         clear_tables(cursor)
 
+        # Load dimensions before the fact table because fact_sales depends on dimension keys.
         logger.info("Loading dimension tables")
         load_dim_customer(transformed_data["dim_customer"], cursor)
         load_dim_product(transformed_data["dim_product"], cursor)

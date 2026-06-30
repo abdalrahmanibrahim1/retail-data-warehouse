@@ -1,6 +1,13 @@
+"""
+Unit tests for the validation layer.
+
+These tests verify that invalid source rows are rejected and valid extracted
+data is accepted by the full validation workflow.
+"""
 import pytest
 import pandas as pd
 import src.validate as validate
+
 @pytest.fixture
 def valid_customer_data():
     data = {
@@ -49,6 +56,15 @@ def valid_sale_data():
     }
 
     return pd.DataFrame([data])
+
+@pytest.fixture
+def valid_extracted_data(valid_customer_data, valid_product_data, valid_store_data, valid_sale_data):
+    return {
+        "customers" : valid_customer_data,
+        "products" : valid_product_data,
+        "stores" : valid_store_data,
+        "sales" : valid_sale_data
+    }
 
 def test_validate_customers_schema_rejects_incorrect_schema(valid_customer_data):
     valid_data = valid_customer_data.copy()
@@ -306,13 +322,8 @@ def test_validate_sale_cost_price_relationship_rejects_invalid_relationship(vali
     assert invalid_df.iloc[0]["unit_cost"] > invalid_df.iloc[0]["unit_price"]
 
 
-def test_validate_accepts_valid_data(valid_customer_data, valid_product_data, valid_store_data, valid_sale_data):
-    valid_data, invalid_data = validate.validate_all(
-        valid_customer_data,
-        valid_product_data,
-        valid_store_data,
-        valid_sale_data
-    )
+def test_validate_accepts_valid_data(valid_extracted_data):
+    valid_data, invalid_data = validate.validate_all(valid_extracted_data)
 
     assert len(valid_data["customers"]) == 1
     assert len(valid_data["products"]) == 1

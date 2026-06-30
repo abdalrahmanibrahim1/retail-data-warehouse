@@ -1,3 +1,9 @@
+"""
+Pipeline orchestrator for the retail data warehouse project.
+
+This module runs the full pipeline from CSV extraction through validation,
+transformation, PostgreSQL loading, and report generation.
+"""
 import logging
 
 from src.extract import extract_all
@@ -8,7 +14,7 @@ from src.report import generate_report
 
 logging.basicConfig(
     level = logging.INFO,
-    format = "%(asctime)s | %(levelname)s | %(message)s",
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 
 logger = logging.getLogger(__name__)

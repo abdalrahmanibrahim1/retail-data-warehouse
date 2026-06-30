@@ -1,3 +1,10 @@
+"""
+Reporting layer for the retail data warehouse pipeline.
+
+This module queries the PostgreSQL warehouse tables and exports reporting outputs
+as both CSV files and a Markdown summary report. CSV files keep raw values for
+analysis tools, while the Markdown report formats key results for human review.
+"""
 from src.load import get_connection
 import csv
 from pathlib import Path
@@ -286,6 +293,7 @@ def get_monthly_revenue_growth():
     conn.close()
 
     return result
+
 def get_monthly_category_revenue_trend():
     conn = get_connection()
     cursor = conn.cursor()
@@ -371,36 +379,57 @@ def get_monthly_category_revenue_growth(category):
     return result
 
 def format_text(value):
+    """
+    Format text values for Markdown table output.
+    """
     if value is None:
         return "N/A"
 
     return str(value).replace("|", "\\|")
 
 def format_money(value):
+    """
+    Format numeric money values for human-readable Markdown output.
+    """
     if value is None:
         return "N/A"
 
     return f"{value:,.0f}"
 
 def format_int(value):
+    """
+    Format integer values for human-readable Markdown output.
+    """
     if value is None:
         return "N/A"
         
     return f"{value:,}"
 
 def format_percent(value):
+    """
+    Format percentage values for human-readable Markdown output.
+    """
     if value is None:
         return "N/A"
 
     return f"{value:.2f}%"
 
 def csv_value(value):
+    """
+    Prepare values for CSV output while keeping numeric values raw for analysis tools.
+    """
     if value is None:
         return ""
 
     return value
 
 def save_csv_report(filename, headers, rows):
+    """
+    Save a report result set as a CSV file in the reports directory.
+
+    CSV outputs are intentionally kept machine-readable so they can be opened in
+    Excel, Power BI, Tableau, or pandas without losing numeric types.
+    """
     REPORTS_DIR.mkdir(exist_ok=True)
 
     output_path = REPORTS_DIR / filename
@@ -413,6 +442,13 @@ def save_csv_report(filename, headers, rows):
             writer.writerow([csv_value(value) for value in row])
 
 def add_markdown_table(lines, title, headers, rows, formatters, max_rows=None):
+    """
+    Append a formatted Markdown table to the report lines list.
+
+    Each column uses a matching formatter function. Large result sets can be
+    limited in the Markdown report with max_rows while the full data remains
+    available in the CSV outputs.
+    """
     lines.append("")
     lines.append(f"## {title}")
     lines.append("")
@@ -421,6 +457,7 @@ def add_markdown_table(lines, title, headers, rows, formatters, max_rows=None):
         lines.append("_No data available._")
         return
 
+    # Limit large tables in the Markdown report while keeping full output in CSV.
     display_rows = rows if max_rows is None else rows[:max_rows]
 
     lines.append("| " + " | ".join(headers) + " |")
@@ -440,6 +477,13 @@ def add_markdown_table(lines, title, headers, rows, formatters, max_rows=None):
 
 
 def generate_report(category_for_growth="Electronics"):
+    """
+    Generate all warehouse report outputs.
+
+    The function runs reporting queries, saves detailed CSV files, and builds a
+    Markdown summary report for GitHub/human review. The selected category is used
+    for the category-specific monthly growth report.
+    """
     REPORTS_DIR.mkdir(exist_ok=True)
 
     total_revenue, total_profit = get_total_revenue_and_profit()
@@ -713,7 +757,3 @@ def generate_report(category_for_growth="Electronics"):
         file.write("\n".join(lines))
 
     return REPORTS_DIR
-
-
-if __name__ == "__main__":
-    generate_report()

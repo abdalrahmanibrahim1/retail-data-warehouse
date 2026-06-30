@@ -1,8 +1,18 @@
+"""
+Integration tests for the loaded PostgreSQL warehouse.
+
+These tests assume the pipeline has already loaded the warehouse and verify that
+the final database tables exist, contain data, preserve foreign-key integrity,
+and contain valid fact measures.
+"""
 import src.load as load
 import pytest
 
 @pytest.fixture
 def db_cursor():
+    """
+    Open a database cursor for each test and close it after the test finishes.
+    """
     conn = load.get_connection()
     cursor = conn.cursor()
 
@@ -50,6 +60,7 @@ def test_warehouse_tables_are_not_empty(db_cursor):
             assert row_count == expectation
 
 def test_fact_sales_has_no_orphan_foreign_keys(db_cursor):
+    # Each fact foreign key must match an existing dimension key.
     relationships = {
         "dim_customer": "customer_key",
         "dim_product" : "product_key",
@@ -73,6 +84,7 @@ def test_fact_sales_has_no_orphan_foreign_keys(db_cursor):
         assert orphan_count == 0, f"{dim}.{key} has {orphan_count} orphan rows"
 
 def test_fact_sales_has_valid_measures(db_cursor):
+    # Profit can be zero because validation allows unit_cost == unit_price.
     db_cursor.execute("""
         SELECT COUNT(*)
         FROM fact_sales

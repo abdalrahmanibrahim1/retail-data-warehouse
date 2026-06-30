@@ -1,8 +1,18 @@
+"""
+Synthetic data generator for the retail data warehouse project.
+
+This module creates realistic retail source CSV files for customers, products,
+stores, and sales. It also injects intentionally invalid rows so the validation
+layer can demonstrate data-quality checks.
+"""
 from pathlib import Path
 import random
 from faker import Faker
 import pandas as pd
 from datetime import date, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
@@ -45,15 +55,22 @@ def generate_customers():
     output_path = DATA_DIR / "customers.csv"
     dirty_customers_df.to_csv(output_path, index=False)
 
-    
-    print(
-    f"Generated {len(customers_df)} valid customers "
-    f"+ {len(dirty_customers_df) - len(customers_df)} invalid customers at {output_path}"
-)
+    logger.info(
+    "Generated customers.csv with %s valid rows and %s invalid rows at %s",
+    len(customers_df),
+    len(dirty_customers_df) - len(customers_df),
+    output_path
+    )
 
     return customers_df
 
 def generate_products():
+    """
+    Generate synthetic product catalog data and write products.csv.
+
+    The product catalog includes multiple retail categories and base price/cost
+    values used later to generate realistic sales transactions.
+    """
     product_catalog = [
         # Electronics
         {"product_name": "Wireless Mouse", "category": "Electronics", "brand": "Logitech", "base_price": 18.99, "base_cost": 10.50},
@@ -140,14 +157,21 @@ def generate_products():
     output_path = DATA_DIR / "products.csv"
     dirty_products_df.to_csv(output_path, index=False)
 
-    print(
-    f"Generated {len(products_df)} valid products "
-    f"+ {len(dirty_products_df) - len(products_df)} invalid products at {output_path}"
+    logger.info(
+    "Generated products.csv with %s valid rows and %s invalid rows at %s",
+    len(products_df),
+    len(dirty_products_df) - len(products_df),
+    output_path
     )
 
     return products_df
 
 def generate_stores():
+    """
+    Generate synthetic store data and write stores.csv.
+
+    Stores are distributed across allowed Jordanian cities used by validation.
+    """
     stores = [
         {"store_id": "ST001", "store_name": "Amman Downtown Store", "store_city": "Amman"},
         {"store_id": "ST002", "store_name": "Irbid City Mall Store", "store_city": "Irbid"},
@@ -165,15 +189,23 @@ def generate_stores():
     output_path = DATA_DIR / "stores.csv"
     dirty_stores_df.to_csv(output_path, index=False)
 
-    print(
-        f"Generated {len(stores_df)} valid stores "
-        f"+ {len(dirty_stores_df) - len(stores_df)} invalid stores at {output_path}"
+    logger.info(
+    "Generated stores.csv with %s valid rows and %s invalid rows at %s",
+    len(stores_df),
+    len(dirty_stores_df) - len(stores_df),
+    output_path
     )
 
     return stores_df
 
-
 def generate_sales(customers_df, products_df, stores_df, num_sales=10000):
+    """
+    Generate synthetic sales transactions and write sales.csv.
+
+    Sales are generated from valid customers, products, and stores. Customers are
+    more likely to buy from stores in their own city (80% chance), while prices and costs vary
+    slightly to simulate discounts, promotions, markups, and supplier cost changes.
+    """
     sales = []
 
     start_date = date(2025, 1, 1)
@@ -227,14 +259,19 @@ def generate_sales(customers_df, products_df, stores_df, num_sales=10000):
     output_path = DATA_DIR / "sales.csv"
     dirty_sales_df.to_csv(output_path, index=False)
 
-    print(
-        f"Generated {len(sales_df)} valid sales "
-        f"+ {len(dirty_sales_df) - len(sales_df)} invalid sales at {output_path}"
+    logger.info(
+    "Generated sales.csv with %s valid rows and %s invalid rows at %s",
+    len(sales_df),
+    len(dirty_sales_df) - len(sales_df),
+    output_path
     )
 
     return sales_df
 
 def add_invalid_customers(customers_df):
+    """
+    Add intentionally invalid customer rows for validation testing.
+    """
     bad_data = [
         {"customer_id": "","customer_name":"Ahmad Ali","customer_city":"Amman", "customer_segment":"Premium"},
         {"customer_id": "S0003","customer_name":"Arthur Morgan","customer_city":"Irbid", "customer_segment":"Business"},
@@ -250,6 +287,9 @@ def add_invalid_customers(customers_df):
     return dirty_customers_df
 
 def add_invalid_products(products_df):
+    """
+    Add intentionally invalid product rows for validation testing.
+    """
     bad_product_data = [
         {"product_id":"","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": 10.50},
         {"product_id":"S0001","product_name": "Mouse", "category": "Electronics", "brand": "Asus", "base_price": 18.99, "base_cost": 10.50},
@@ -269,6 +309,9 @@ def add_invalid_products(products_df):
     return dirty_products_df
 
 def add_invalid_stores(stores_df):
+    """
+    Add intentionally invalid store rows for validation testing.
+    """
     bad_store_data= [
         {"store_id": "", "store_name": "Amman Downtown Store", "store_city": "Amman"},
         {"store_id": "S0002", "store_name": "Irbid City Mall Store", "store_city": "Irbid"},
@@ -284,6 +327,12 @@ def add_invalid_stores(stores_df):
     return dirty_stores_df
 
 def add_invalid_sales(sales_df):
+    """
+    Add intentionally invalid sales rows for validation testing.
+
+    Invalid rows cover bad IDs, missing foreign keys, invalid dates, invalid
+    quantities, missing price/cost values, and negative-profit cases.
+    """
     bad_sale_data = [
         {"sale_id": "", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
         {"sale_id": "SALE010002", "customer_id": "C0001", "product_id": "P0001", "store_id": "ST001", "sale_date": "2025-06-15", "quantity": 2, "unit_price": 20.00, "unit_cost": 10.00},
@@ -311,9 +360,3 @@ def add_invalid_sales(sales_df):
     dirty_sales_df = pd.concat([sales_df, bad_sale_data_df], ignore_index=True)
 
     return dirty_sales_df
-
-if __name__ == "__main__":
-    customers_df = generate_customers()
-    products_df = generate_products()
-    stores_df = generate_stores()
-    generate_sales(customers_df, products_df, stores_df)
