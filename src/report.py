@@ -1,5 +1,9 @@
 from src.load import get_connection
+import csv
+from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPORTS_DIR = PROJECT_ROOT / "reports"
 
 def get_total_revenue_and_profit():
     conn = get_connection()
@@ -365,284 +369,351 @@ def get_monthly_category_revenue_growth(category):
     conn.close()
 
     return result
+
+def format_text(value):
+    if value is None:
+        return "N/A"
+
+    return str(value).replace("|", "\\|")
+
+def format_money(value):
+    if value is None:
+        return "N/A"
+
+    return f"{value:,.0f}"
+
+def format_int(value):
+    if value is None:
+        return "N/A"
+        
+    return f"{value:,}"
+
+def format_percent(value):
+    if value is None:
+        return "N/A"
+
+    return f"{value:.2f}%"
+
+def csv_value(value):
+    if value is None:
+        return ""
+
+    return value
+
+def save_csv_report(filename, headers, rows):
+    REPORTS_DIR.mkdir(exist_ok=True)
+
+    output_path = REPORTS_DIR / filename
+
+    with open(output_path, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+
+        for row in rows:
+            writer.writerow([csv_value(value) for value in row])
+
+def add_markdown_table(lines, title, headers, rows, formatters, max_rows=None):
+    lines.append("")
+    lines.append(f"## {title}")
+    lines.append("")
+
+    if not rows:
+        lines.append("_No data available._")
+        return
+
+    display_rows = rows if max_rows is None else rows[:max_rows]
+
+    lines.append("| " + " | ".join(headers) + " |")
+    lines.append("| " + " | ".join(["---"] * len(headers)) + " |")
+
+    for row in display_rows:
+        formatted_values = []
+
+        for value, formatter in zip(row, formatters):
+            formatted_values.append(formatter(value))
+
+        lines.append("| " + " | ".join(formatted_values) + " |")
+
+    if max_rows is not None and len(rows) > max_rows:
+        lines.append("")
+        lines.append(f"_Showing first {max_rows} rows. Full report available in CSV output._")
+
+
+def generate_report(category_for_growth="Electronics"):
+    REPORTS_DIR.mkdir(exist_ok=True)
+
+    total_revenue, total_profit = get_total_revenue_and_profit()
+
+    revenue_by_category = get_total_revenue_by_product_category()
+    top_products = get_top_5_products_by_revenue()
+    sales_by_city = get_sales_by_store_city()
+    customer_segment_revenue = get_revenue_by_customer_segment()
+    monthly_revenue_trend = get_monthly_revenue_trend()
+    category_city_segment = get_category_city_segment_performance()
+    category_margin_ranking = get_category_profit_margin_ranking()
+    customer_segment_avg_sale = get_customer_segment_average_sale_ranking()
+    monthly_revenue_growth = get_monthly_revenue_growth()
+    monthly_category_trend = get_monthly_category_revenue_trend()
+    monthly_category_growth = get_monthly_category_revenue_growth(category_for_growth)
+
+    save_csv_report(
+        "warehouse_summary.csv",
+        ["metric", "value"],
+        [
+            ("total_revenue", total_revenue),
+            ("total_profit", total_profit),
+        ],
+    )
+
+    save_csv_report(
+        "revenue_by_product_category.csv",
+        ["category", "total_revenue"],
+        revenue_by_category,
+    )
+
+    save_csv_report(
+        "top_5_products_by_revenue.csv",
+        [
+            "product_name",
+            "category",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+            "average_revenue_per_sale",
+            "profit_margin_percentage",
+        ],
+        top_products,
+    )
+
+    save_csv_report(
+        "sales_by_store_city.csv",
+        [
+            "store_city",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+        ],
+        sales_by_city,
+    )
+
+    save_csv_report(
+        "revenue_by_customer_segment.csv",
+        [
+            "customer_segment",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+            "average_revenue_per_sale",
+            "profit_margin_percentage",
+        ],
+        customer_segment_revenue,
+    )
+
+    save_csv_report(
+        "monthly_revenue_trend.csv",
+        [
+            "year",
+            "month",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+            "average_revenue_per_sale",
+            "profit_margin_percentage",
+        ],
+        monthly_revenue_trend,
+    )
+
+    save_csv_report(
+        "category_city_segment_performance.csv",
+        [
+            "store_city",
+            "customer_segment",
+            "category",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+            "average_revenue_per_sale",
+            "profit_margin_percentage",
+        ],
+        category_city_segment,
+    )
+
+    save_csv_report(
+        "category_profit_margin_ranking.csv",
+        [
+            "category",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+            "average_revenue_per_sale",
+            "profit_margin_percentage",
+        ],
+        category_margin_ranking,
+    )
+
+    save_csv_report(
+        "customer_segment_average_sale_ranking.csv",
+        [
+            "customer_segment",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+            "average_revenue_per_sale",
+            "profit_margin_percentage",
+        ],
+        customer_segment_avg_sale,
+    )
+
+    save_csv_report(
+        "monthly_revenue_growth.csv",
+        [
+            "year",
+            "month",
+            "total_revenue",
+            "previous_month_revenue",
+            "growth_amount",
+            "growth_percentage",
+        ],
+        monthly_revenue_growth,
+    )
+
+    save_csv_report(
+        "monthly_category_revenue_trend.csv",
+        [
+            "year",
+            "month",
+            "category",
+            "total_revenue",
+            "total_profit",
+            "number_of_sales",
+            "average_revenue_per_sale",
+            "profit_margin_percentage",
+        ],
+        monthly_category_trend,
+    )
+
+    save_csv_report(
+        f"{category_for_growth.lower()}_monthly_revenue_growth.csv",
+        [
+            "year",
+            "month",
+            "category",
+            "total_revenue",
+            "previous_month_revenue",
+            "growth_amount",
+            "growth_percentage",
+        ],
+        monthly_category_growth,
+    )
+
+    lines = []
+
+    lines.append("# Retail Data Warehouse Report")
+    lines.append("")
+    lines.append("This report was generated from the PostgreSQL star-schema warehouse.")
+    lines.append("")
+    lines.append("## Overall Warehouse Summary")
+    lines.append("")
+    lines.append(f"- **Total revenue:** {format_money(total_revenue)}")
+    lines.append(f"- **Total profit:** {format_money(total_profit)}")
+
+    add_markdown_table(
+        lines,
+        "Revenue by Product Category",
+        ["Category", "Revenue"],
+        revenue_by_category,
+        [format_text, format_money],
+    )
+
+    add_markdown_table(
+        lines,
+        "Top 5 Products by Revenue",
+        ["Product", "Category", "Revenue", "Profit", "Sales", "Avg/Sale", "Margin %"],
+        top_products,
+        [format_text, format_text, format_money, format_money, format_int, format_money, format_percent],
+    )
+
+    add_markdown_table(
+        lines,
+        "Sales by Store City",
+        ["Store City", "Revenue", "Profit", "Sales"],
+        sales_by_city,
+        [format_text, format_money, format_money, format_int],
+    )
+
+    add_markdown_table(
+        lines,
+        "Revenue by Customer Segment",
+        ["Segment", "Revenue", "Profit", "Sales", "Avg/Sale", "Margin %"],
+        customer_segment_revenue,
+        [format_text, format_money, format_money, format_int, format_money, format_percent],
+    )
+
+    add_markdown_table(
+        lines,
+        "Monthly Revenue Trend",
+        ["Year", "Month", "Revenue", "Profit", "Sales", "Avg/Sale", "Margin %"],
+        monthly_revenue_trend,
+        [format_int, format_int, format_money, format_money, format_int, format_money, format_percent],
+    )
+
+    add_markdown_table(
+        lines,
+        "Category Performance by City and Customer Segment",
+        ["City", "Segment", "Category", "Revenue", "Profit", "Sales", "Avg/Sale", "Margin %"],
+        category_city_segment,
+        [format_text, format_text, format_text, format_money, format_money, format_int, format_money, format_percent],
+        max_rows=20,
+    )
+
+    add_markdown_table(
+        lines,
+        "Category Profit Margin Ranking",
+        ["Category", "Revenue", "Profit", "Sales", "Avg/Sale", "Margin %"],
+        category_margin_ranking,
+        [format_text, format_money, format_money, format_int, format_money, format_percent],
+    )
+
+    add_markdown_table(
+        lines,
+        "Customer Segment Average Sale Ranking",
+        ["Segment", "Revenue", "Profit", "Sales", "Avg/Sale", "Margin %"],
+        customer_segment_avg_sale,
+        [format_text, format_money, format_money, format_int, format_money, format_percent],
+    )
+
+    add_markdown_table(
+        lines,
+        "Monthly Revenue Growth",
+        ["Year", "Month", "Revenue", "Previous Revenue", "Growth", "Growth %"],
+        monthly_revenue_growth,
+        [format_int, format_int, format_money, format_money, format_money, format_percent],
+    )
+
+    add_markdown_table(
+        lines,
+        "Monthly Category Revenue Trend",
+        ["Year", "Month", "Category", "Revenue", "Profit", "Sales", "Avg/Sale", "Margin %"],
+        monthly_category_trend,
+        [format_int, format_int, format_text, format_money, format_money, format_int, format_money, format_percent],
+        max_rows=30,
+    )
+
+    add_markdown_table(
+        lines,
+        f"Monthly Revenue Growth for Category: {category_for_growth}",
+        ["Year", "Month", "Category", "Revenue", "Previous Revenue", "Growth", "Growth %"],
+        monthly_category_growth,
+        [format_int, format_int, format_text, format_money, format_money, format_money, format_percent],
+    )
+
+    markdown_report_path = REPORTS_DIR / "warehouse_report.md"
+
+    with open(markdown_report_path, "w", encoding="utf-8") as file:
+        file.write("\n".join(lines))
+
+    print(f"Reports generated successfully in {REPORTS_DIR}/")
+
+
 if __name__ == "__main__":
-    revenue, profit = get_total_revenue_and_profit()
-
-    print("")
-    print("Overall Warehouse Summary")
-    print("-" * 40)
-    print(f"Total revenue: {revenue:,.0f}")
-    print(f"Total profit: {profit:,.0f}")
-
-    print("")
-    print("Revenue by Product Category")
-    print(
-        f"{'Category':<20} | "
-        f"{'Revenue':>15}"
-    )
-    print("-" * 40)
-
-    for row in get_total_revenue_by_product_category():
-        category, revenue = row
-        print(f"{category:<20} | {revenue:>15,.0f}")
-
-    print("")
-    print("Top 5 Products by Revenue")
-    print(
-        f"{'Product':<25} | "
-        f"{'Category':<15} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>8} | "
-        f"{'Avg/Sale':>15} | "
-        f"{'Margin %':>10}"
-    )
-    print("-" * 120)
-
-    for row in get_top_5_products_by_revenue():
-        product, category, revenue, profit, num_of_sales, avg_revenue_per_sale, profit_margin = row
-
-        print(
-            f"{product:<25} | "
-            f"{category:<15} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>8} | "
-            f"{avg_revenue_per_sale:>15,.0f} | "
-            f"{profit_margin:>9.2f}%"
-        )
-
-    print("")
-    print("Sales by Store City")
-    print(
-        f"{'Store City':<15} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>10}"
-    )
-    print("-" * 65)
-
-    for row in get_sales_by_store_city():
-        city, revenue, profit, num_of_sales = row
-
-        print(
-            f"{city:<15} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>10}"
-        )
-
-    print("")
-    print("Revenue by Customer Segment")
-    print(
-        f"{'Customer Segment':<18} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>10} | "
-        f"{'Avg/Sale':>15} | "
-        f"{'Margin %':>10}"
-    )
-    print("-" * 105)
-
-    for row in get_revenue_by_customer_segment():
-        segment, revenue, profit, num_of_sales, avg_revenue_per_sale, profit_margin = row
-
-        print(
-            f"{segment:<18} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>10} | "
-            f"{avg_revenue_per_sale:>15,.0f} | "
-            f"{profit_margin:>9.2f}%"
-        )
-
-    print("")
-    print("Monthly Revenue Trend")
-    print(
-        f"{'Year':<6} | "
-        f"{'Month':<6} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>10} | "
-        f"{'Avg/Sale':>15} | "
-        f"{'Margin %':>10}"
-    )
-    print("-" * 105)
-
-    for row in get_monthly_revenue_trend():
-        year, month, revenue, profit, num_of_sales, avg_revenue_per_sale, profit_margin = row
-
-        print(
-            f"{year:<6} | "
-            f"{month:<6} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>10} | "
-            f"{avg_revenue_per_sale:>15,.0f} | "
-            f"{profit_margin:>9.2f}%"
-        )
-
-
-    print("")
-    print("Category Performance by City and Customer Segment")
-    print(
-        f"{'City':<15} | "
-        f"{'Segment':<18} | "
-        f"{'Category':<15} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>8} | "
-        f"{'Avg/Sale':>15} | "
-        f"{'Margin %':>10}"
-    )
-    print("-" * 130)
-
-    for row in get_category_city_segment_performance():
-        city, segment, category, revenue, profit, num_of_sales, avg_revenue_per_sale, profit_margin = row
-
-        print(
-            f"{city:<15} | "
-            f"{segment:<18} | "
-            f"{category:<15} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>8} | "
-            f"{avg_revenue_per_sale:>15,.0f} | "
-            f"{profit_margin:>9.2f}%"
-        )
-
-    print("")
-    print("Category Profit Margin Ranking")
-    print(
-        f"{'Category':<20} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>8} | "
-        f"{'Avg/Sale':>15} | "
-        f"{'Margin %':>10}"
-    )
-    print("-" * 100)
-
-    for row in get_category_profit_margin_ranking():
-        category, revenue, profit, num_of_sales, avg_revenue_per_sale, profit_margin = row
-
-        print(
-            f"{category:<20} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>8} | "
-            f"{avg_revenue_per_sale:>15,.0f} | "
-            f"{profit_margin:>9.2f}%"
-        )
-
-    print("")
-    print("Customer Segment Average Sale Ranking")
-    print(
-        f"{'Customer Segment':<18} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>8} | "
-        f"{'Avg/Sale':>15} | "
-        f"{'Margin %':>10}"
-    )
-    print("-" * 105)
-
-    for row in get_customer_segment_average_sale_ranking():
-        segment, revenue, profit, num_of_sales, avg_revenue_per_sale, profit_margin = row
-
-        print(
-            f"{segment:<18} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>8} | "
-            f"{avg_revenue_per_sale:>15,.0f} | "
-            f"{profit_margin:>9.2f}%"
-        )
-
-    print("")
-    print("Monthly Revenue Growth")
-    print(
-        f"{'Year':<6} | "
-        f"{'Month':<6} | "
-        f"{'Revenue':>15} | "
-        f"{'Prev Revenue':>15} | "
-        f"{'Growth':>15} | "
-        f"{'Growth %':>10}"
-    )
-    print("-" * 95)
-
-    for row in get_monthly_revenue_growth():
-        year, month, revenue, previous_revenue, growth_amount, growth_percentage = row
-
-        previous_revenue_display = "N/A" if previous_revenue is None else f"{previous_revenue:,.0f}"
-        growth_amount_display = "N/A" if growth_amount is None else f"{growth_amount:,.0f}"
-        growth_percentage_display = "N/A" if growth_percentage is None else f"{growth_percentage:.2f}%"
-
-        print(
-            f"{year:<6} | "
-            f"{month:<6} | "
-            f"{revenue:>15,.0f} | "
-            f"{previous_revenue_display:>15} | "
-            f"{growth_amount_display:>15} | "
-            f"{growth_percentage_display:>10}"
-        )
-
-    print("")
-    print("Monthly Category Revenue Trend")
-    print(
-        f"{'Year':<6} | "
-        f"{'Month':<6} | "
-        f"{'Category':<15} | "
-        f"{'Revenue':>15} | "
-        f"{'Profit':>15} | "
-        f"{'Sales':>8} | "
-        f"{'Avg/Sale':>15} | "
-        f"{'Margin %':>10}"
-    )
-    print("-" * 125)
-
-    for row in get_monthly_category_revenue_trend():
-        year, month, category, revenue, profit, num_of_sales, avg_revenue_per_sale, profit_margin = row
-
-        print(
-            f"{year:<6} | "
-            f"{month:<6} | "
-            f"{category:<15} | "
-            f"{revenue:>15,.0f} | "
-            f"{profit:>15,.0f} | "
-            f"{num_of_sales:>8} | "
-            f"{avg_revenue_per_sale:>15,.0f} | "
-            f"{profit_margin:>9.2f}%"
-        )
-
-    category = "Electronics"
-
-    print("")
-    print(f"Monthly Revenue Growth for Category: {category}")
-    print(
-        f"{'Year':<6} | "
-        f"{'Month':<6} | "
-        f"{'Category':<15} | "
-        f"{'Revenue':>15} | "
-        f"{'Prev Revenue':>15} | "
-        f"{'Growth':>15} | "
-        f"{'Growth %':>10}"
-    )
-    print("-" * 115)
-
-    for row in get_monthly_category_revenue_growth(category):
-        year, month, category_name, revenue, previous_revenue, growth_amount, growth_percentage = row
-
-        previous_revenue_display = "N/A" if previous_revenue is None else f"{previous_revenue:,.0f}"
-        growth_amount_display = "N/A" if growth_amount is None else f"{growth_amount:,.0f}"
-        growth_percentage_display = "N/A" if growth_percentage is None else f"{growth_percentage:.2f}%"
-
-        print(
-            f"{year:<6} | "
-            f"{month:<6} | "
-            f"{category_name:<15} | "
-            f"{revenue:>15,.0f} | "
-            f"{previous_revenue_display:>15} | "
-            f"{growth_amount_display:>15} | "
-            f"{growth_percentage_display:>10}"
-        )
+    generate_report()
